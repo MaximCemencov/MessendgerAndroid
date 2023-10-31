@@ -5,10 +5,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
-import com.example.androidapp.viewModels.SharedViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.example.androidapp.features.mainUrl
+import com.example.androidapp.viewModels.SharedViewModel
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,50 +27,45 @@ class LoginViewModel : ViewModel() {
 
 
     suspend fun checkLogin(sharedViewModel: SharedViewModel, navController: NavHostController) {
-        val client = OkHttpClient()
 
-
-        // Создаем JSON объект с логином и паролем
         val jsonBody = JSONObject()
         jsonBody.put("login", login)
         jsonBody.put("password", password)
 
-
-        // Создаем запрос
-        val request = Request.Builder()
-            .url("$mainUrl/login") // Замените на URL вашего сервера
-            .post(jsonBody.toString().toRequestBody("application/json".toMediaTypeOrNull()))
-            .build()
-
-
         try {
+            val token = FirebaseMessaging.getInstance().token.await() // Дождитесь получения токена
+
+            jsonBody.put("FCMtoken", token)
+
+            val request = Request.Builder()
+                .url("$mainUrl/login")
+                .post(jsonBody.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                .build()
+
             val response = withContext(Dispatchers.IO) {
-                client.newCall(request).execute()
+                sharedViewModel.client.newCall(request).execute()
             }
 
             if (response.isSuccessful) {
-                val responseString = response.body?.string() // Получаем тело ответа в виде строки
+                val responseString = response.body?.string()
                 try {
                     val jsonObject = JSONObject(responseString)
-                    sharedViewModel.userId = jsonObject.optInt("id") // Устанавливаем userId в sharedViewModel
+                    sharedViewModel.userId = jsonObject.optInt("id")
                     sharedViewModel.userName = jsonObject.optString("user_name")
                     sharedViewModel.login = login
                     sharedViewModel.hasLogIn = true
-                    userMessage = "You successfully Log in"
+                    sharedViewModel.saveToSharedPreferences()
                     navController.navigate("main_screen")
-                } catch (e: JSONException) {
-                    e.printStackTrace()
-                    // Обработка ошибки при разборе JSON
-                }
+                } catch (_: JSONException) {}
             } else if (response.code == 401) {
-                userMessage =  "wrong login or password"
+                userMessage = "Wrong login or password"
             } else {
-                "Got error while log in: ${response.message}"
+                userMessage = "Got error while log in"
             }
 
             response.close()
         } catch (e: IOException) {
-            userMessage = "Произошла сетевая ошибка: ${e.message}"
+            userMessage = "A network error has occurred"
         }
     }
 }

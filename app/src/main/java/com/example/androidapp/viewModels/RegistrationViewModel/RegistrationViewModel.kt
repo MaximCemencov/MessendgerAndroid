@@ -4,9 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.example.androidapp.features.mainUrl
+import com.example.androidapp.viewModels.SharedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,9 +24,8 @@ class RegistrationViewModel : ViewModel() {
     var passwordVisible by mutableStateOf(false)
     var userMessage by mutableStateOf("")
 
-    suspend fun createUser() {
-        // Создаем клиент OkHttp
-        val client = OkHttpClient()
+
+    suspend fun createUser(sharedViewModel: SharedViewModel): Int {
 
 
         val jsonBody = JSONObject()
@@ -33,31 +34,30 @@ class RegistrationViewModel : ViewModel() {
         jsonBody.put("password", password)
 
 
-        // Создаем запрос
         val request = Request.Builder()
             .url("$mainUrl/registration") // Замените на URL вашего сервера
             .post(RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody.toString()))
             .build()
 
         try {
-            // Отправляем запрос на сервер в фоновом потоке
             val response = withContext(Dispatchers.IO) {
-                client.newCall(request).execute()
+                sharedViewModel.client.newCall(request).execute()
             }
 
-            // Обработка успешного ответа
-            userMessage = if (response.isSuccessful) {
-                "You successfully create an account"
+             if (response.isSuccessful) {
+                 userMessage =   "You successfully create an account"
+                 delay(1000)
+                 return 0
             } else if (response.code == 409) {
-                "this user already exist"
+                 userMessage =   "this user already exist"
+                 return 1
             } else {
-                "Произошла ошибка при регистрации пользователя: ${response.message}"
-            }
-
-            response.close()
+                 userMessage =  "Occurred error in user registration"
+                 return 1
+             }
         } catch (e: IOException) {
-            // Обработка сетевой ошибки
-            userMessage = "Произошла сетевая ошибка: ${e.message}"
+            userMessage = "A network error has occurred"
+            return 1
         }
     }
 }
