@@ -27,13 +27,19 @@ fun MessageItem(
             .fillMaxWidth()
             .padding(vertical = 2.dp),
         horizontalArrangement =
-        if (mess.hasYour) Arrangement.End
-        else Arrangement.Start
+        if (mess.hasYour)
+            Arrangement.End
+        else
+            Arrangement.Start
     ) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(35.dp))
-                .background(if (mess.hasYour) Color(0xFF32A0FD) else Color(0xFF00BB00))
+                .clip(RoundedCornerShape(25.dp))
+                .background(
+                    if (mess.hasYour)
+                        Color(0xFF32A0FD)
+                    else
+                        Color(0xFF00BB00))
                 .padding(start = 17.dp, top = 5.dp, end = 17.dp, bottom = 5.dp),
         ) {
             Text(

@@ -62,7 +62,7 @@ fun MessagesScreen(
     LaunchedEffect(key1 = page.value) {
         loading.value = true
         val offset = limit * page.value
-        viewModel.getMessages(sharedViewModel, offset, lazyListState, coroutineScope)
+        viewModel.getMessages(offset, lazyListState, coroutineScope)
         loading.value = false
     }
 
@@ -76,11 +76,9 @@ fun MessagesScreen(
     }
 
     val colors = MyColors
-    val backgroundColor =
-        if (isDarkTheme) colors.backgroundColorDarkTheme else colors.backgroundColorWhiteTheme
+    val backgroundColor = if (isDarkTheme) colors.backgroundColorDarkTheme else colors.backgroundColorWhiteTheme
     val buttonColor = if (isDarkTheme) colors.buttonColorDarkTheme else colors.buttonColorWhiteTheme
-    val buttonTextColor =
-        if (isDarkTheme) colors.buttonTextColorDarkTheme else colors.buttonTextColorWhiteTheme
+    val buttonTextColor = if (isDarkTheme) colors.buttonTextColorDarkTheme else colors.buttonTextColorWhiteTheme
     val textColor = if (isDarkTheme) colors.textColorDarkTheme else colors.textColorWhiteTheme
 
 
@@ -93,6 +91,7 @@ fun MessagesScreen(
             navigationIcon = {
                 IconButton(onClick = {
                     navController.popBackStack()
+
                 }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = null, tint = textColor)
                 }
@@ -163,7 +162,7 @@ fun MessagesScreen(
             trailingIcon = {
                 IconButton(
                     onClick = {
-                        viewModel.newMessage(sharedViewModel, webSocket)
+                        viewModel.newMessage(webSocket)
                     }
                 ) {
                     Icon(

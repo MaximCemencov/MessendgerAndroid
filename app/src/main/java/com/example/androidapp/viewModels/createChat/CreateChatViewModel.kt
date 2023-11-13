@@ -27,6 +27,7 @@ import org.json.JSONObject
 import java.io.IOException
 
 class CreateChatViewModel: ViewModel() {
+
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
 
@@ -70,7 +71,6 @@ class CreateChatViewModel: ViewModel() {
 
         val allUsers = mutableListOf<Users>()
 
-
         val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
         val requestBody = jsonBody.toString().toRequestBody(mediaType)
 
@@ -83,7 +83,7 @@ class CreateChatViewModel: ViewModel() {
             val response = withContext(Dispatchers.IO) {
                 client.newCall(request).execute()
             }
-            if (response.code == 200) {
+            if (response.isSuccessful) {
                 val data = response.body?.string()
 
                 // Парсим JSON-ответ
@@ -125,6 +125,8 @@ class CreateChatViewModel: ViewModel() {
         val jsonBody = JSONObject()
         jsonBody.put("user_id_1", userId1)
         jsonBody.put("user_id_2", user.userId)
+        jsonBody.put("login", sharedViewModel.login)
+        jsonBody.put("password", sharedViewModel.password)
 
         val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
         val requestBody = jsonBody.toString().toRequestBody(mediaType)
@@ -144,7 +146,7 @@ class CreateChatViewModel: ViewModel() {
             } else if (response.code == 409) {
                 _errorText.value = "You already create a chat!"
             }
-        } catch (e: IOException) { }
+        } catch (_: IOException) { }
     }
 }
 

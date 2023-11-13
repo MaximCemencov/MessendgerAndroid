@@ -1,10 +1,8 @@
 package com.example.androidapp.viewModels.createChat
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.androidapp.DataClass.Chat
-import com.example.androidapp.features.getUserIdFromSharedPreferences
 import com.example.androidapp.features.mainUrl
 import com.example.androidapp.viewModels.SharedViewModel
 import kotlinx.coroutines.Dispatchers
@@ -19,65 +17,69 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
-class MainChatScreenViewModel(application: Application, sharedViewModel: SharedViewModel) : AndroidViewModel(application) {
-    private val context = getApplication<Application>().applicationContext
+class MainChatScreenViewModel(sharedViewModel: SharedViewModel) : ViewModel() {
 
 
     private val _allUsers = MutableStateFlow(listOf<Chat>())
     val allUsers = _allUsers.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
 
-    private val _isSearching = MutableStateFlow(false)
-    val isSearching = _isSearching.asStateFlow()
+
+    init {
+        parseChats(sharedViewModel)
+    }
 
 
     fun parseChats(sharedViewModel: SharedViewModel) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+            _isLoading.value = true
 
-                _isSearching.value = true
-                _allUsers.value = listOf()
+            _allUsers.value = listOf()
 
-                val jsonBody = JSONObject()
-                jsonBody.put("id", getUserIdFromSharedPreferences(context))
+            val jsonBody = JSONObject()
 
-                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-                val requestBody = jsonBody.toString().toRequestBody(mediaType)
+            jsonBody.put("id", sharedViewModel.userId)
+            jsonBody.put("password", sharedViewModel.password)
+            jsonBody.put("login", sharedViewModel.login)
 
-                val request = Request.Builder()
-                    .url("$mainUrl/get_chats")
-                    .post(requestBody)
-                    .build()
 
-                try {
+            val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+            val requestBody = jsonBody.toString().toRequestBody(mediaType)
 
-                    val response = sharedViewModel.client.newCall(request).execute()
+            val request = Request.Builder()
+                .url("$mainUrl/get_chats")
+                .post(requestBody)
+                .build()
 
-                    if (response.code == 200) {
-                        val data = response.body?.string()
-
-                        val chatsArray = JSONArray(data)
-
-                        val chatList = mutableListOf<Chat>()
-
-                        for (i in 0 until chatsArray.length()) {
-                            val chatObject = chatsArray.getJSONObject(i)
-
-                            val userName = chatObject.getString("user_name")
-                            val chatUserId = chatObject.getString("id")
-                            val chatId = chatObject.getString("chat_id")
-                            val content = chatObject.getString("last_message")
-
-                            chatList.add(Chat(userName, chatUserId, chatId, content))
-                        }
-
-                        _allUsers.value = chatList
-
-                    }
-                } catch (_: IOException) {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    sharedViewModel.client.newCall(request).execute()
                 }
-                _isSearching.value = false
+
+                if (response.isSuccessful) {
+                    val data = response.body?.string()
+
+                    val chatsArray = JSONArray(data)
+
+                    val chatList = mutableListOf<Chat>()
+
+                    for (i in 0 until chatsArray.length()) {
+                        val chatObject = chatsArray.getJSONObject(i)
+
+                        val userName = chatObject.getString("user_name")
+                        val chatUserId = chatObject.getString("id")
+                        val chatId = chatObject.getString("chat_id")
+                        val content = chatObject.getString("last_message")
+
+                        chatList.add(Chat(userName, chatUserId, chatId, content))
+                    }
+                    _allUsers.value = chatList
+                }
+            } catch (_: IOException) {
             }
+            _isLoading.value = false
         }
     }
 }

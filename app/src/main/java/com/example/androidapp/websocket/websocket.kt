@@ -30,7 +30,6 @@ class MyWebSocketListener(
         jsonBody.put("recipient_id", -1)
         jsonBody.put("content", "")
         jsonBody.put("time_of_day", "")
-
         webSocket.send(jsonBody.toString())
         Log.d(TAG, "onOpen $response")
     }
@@ -38,7 +37,7 @@ class MyWebSocketListener(
     override fun onMessage(webSocket: WebSocket, text: String) {
         super.onMessage(webSocket, text)
         messagesViewModel.viewModelScope.launch {
-            messagesViewModel.getNewMessage(sharedViewModel, text, lazyListState, coroutineScope)
+            messagesViewModel.getNewMessage(text, lazyListState, coroutineScope)
         }
     }
 

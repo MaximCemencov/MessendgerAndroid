@@ -15,8 +15,9 @@ fun parseCustomTime(inputString: String): String? {
 
         // Добавляем 3 часа к времени
         val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.add(Calendar.HOUR_OF_DAY, 3)
+        if (date != null) {
+            calendar.time = date
+        }
 
         // Создаем SimpleDateFormat для форматирования времени в "HH:mm"
         val outputFormat = SimpleDateFormat("HH:mm")

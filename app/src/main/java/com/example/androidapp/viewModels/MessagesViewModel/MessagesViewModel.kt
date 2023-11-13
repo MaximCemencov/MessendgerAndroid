@@ -23,18 +23,22 @@ import org.json.JSONObject
 import java.io.IOException
 
 
-class MessagesViewModel : ViewModel() {
+class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewModel() {
     var messages = mutableStateListOf(listOf<Message>())
     val textState = mutableStateOf("")
 
     fun clearMessages() {
-        messages.clear()
+        if (messages.isNotEmpty()) {
+            messages.clear()
+        }
     }
 
-    suspend fun getMessages(sharedViewModel: SharedViewModel, offset: Int, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
+    suspend fun getMessages(offset: Int, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
         val jsonBody = JSONObject()
         jsonBody.put("chat_id", sharedViewModel.current_chat_id)
         jsonBody.put("offset", offset)
+        jsonBody.put("login", sharedViewModel.login)
+        jsonBody.put("password", sharedViewModel.password)
 
         val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
         val requestBody = jsonBody.toString().toRequestBody(mediaType)
@@ -87,7 +91,7 @@ class MessagesViewModel : ViewModel() {
     }
 
 
-    fun newMessage(sharedViewModel: SharedViewModel, webSocket: WebSocket) {
+    fun newMessage(webSocket: WebSocket) {
         if (textState.value.isBlank()) {
             return
         }
@@ -104,7 +108,7 @@ class MessagesViewModel : ViewModel() {
         webSocket.send(jsonBody.toString())
     }
 
-    fun getNewMessage(sharedViewModel: SharedViewModel, data: String, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
+    fun getNewMessage(data: String, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
         try {
             val messageObject = JSONObject(data)
 
@@ -121,7 +125,6 @@ class MessagesViewModel : ViewModel() {
             )
 
             messages.add(0, listOf(newMessage))
-
 
             coroutineScope.launch {
                 val lastIndex = messages.size - 1

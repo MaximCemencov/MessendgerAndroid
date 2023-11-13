@@ -10,14 +10,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
 
-class RegistrationViewModel : ViewModel() {
+class RegistrationViewModel(private val sharedViewModel: SharedViewModel) : ViewModel() {
     var userName by mutableStateOf("")
     var login by mutableStateOf("")
     var password by mutableStateOf("")
@@ -25,7 +25,7 @@ class RegistrationViewModel : ViewModel() {
     var userMessage by mutableStateOf("")
 
 
-    suspend fun createUser(sharedViewModel: SharedViewModel): Int {
+    suspend fun createUser(): Int {
 
 
         val jsonBody = JSONObject()
@@ -36,7 +36,7 @@ class RegistrationViewModel : ViewModel() {
 
         val request = Request.Builder()
             .url("$mainUrl/registration") // Замените на URL вашего сервера
-            .post(RequestBody.create("application/json".toMediaTypeOrNull(), jsonBody.toString()))
+            .post(jsonBody.toString().toRequestBody("application/json".toMediaTypeOrNull()))
             .build()
 
         try {

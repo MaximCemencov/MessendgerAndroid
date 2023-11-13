@@ -13,7 +13,6 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -34,13 +33,11 @@ import androidx.navigation.NavHostController
 import com.example.androidapp.R
 import com.example.androidapp.features.MyColors
 import com.example.androidapp.viewModels.RegistrationViewModel.LoginViewModel
-import com.example.androidapp.viewModels.SharedViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    sharedViewModel: SharedViewModel,
     navController: NavHostController,
     viewModel: LoginViewModel,
     isDarkTheme: Boolean
@@ -169,7 +166,7 @@ fun LoginScreen(
             onClick = {
                 if (!viewModel.login.isBlank() && !viewModel.password.isBlank())
                     coroutineScope.launch {
-                        viewModel.checkLogin(sharedViewModel, navController)
+                        viewModel.login(navController)
                     }
                 else if (viewModel.login.isBlank()) viewModel.userMessage =
                     "Fill you’re login!"

@@ -27,12 +27,10 @@ import androidx.navigation.NavHostController
 import com.example.androidapp.features.MyColors
 import com.example.androidapp.viewModels.RegistrationViewModel.LoginViewModel
 import com.example.androidapp.viewModels.RegistrationViewModel.RegistrationViewModel
-import com.example.androidapp.viewModels.SharedViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun MainRegistrationScreen(
-    sharedViewModel: SharedViewModel,
     navController: NavHostController,
     isDarkTheme: Boolean,
     registrationViewModel: RegistrationViewModel,
@@ -57,7 +55,7 @@ fun MainRegistrationScreen(
     ) {
         // Отображаем содержимое в зависимости от выбранной опции
         when (selectedOption) {
-            0 -> LoginScreen(sharedViewModel, navController, loginViewModel, isDarkTheme)
+            0 -> LoginScreen(navController, loginViewModel, isDarkTheme)
             1 -> RegistrationScreen(registrationViewModel, isDarkTheme) {
                 val userNameValid = registrationViewModel.userName.isNotBlank()
                 val passwordValid = registrationViewModel.password.isNotBlank()
@@ -65,7 +63,7 @@ fun MainRegistrationScreen(
 
                 if (userNameValid && passwordValid && loginValid)
                     coroutineScope.launch {
-                        selectedOption = registrationViewModel.createUser(sharedViewModel)
+                        registrationViewModel.createUser()
                     }
                 else if (!userNameValid) registrationViewModel.userMessage = "please fill you're username!"
                 else if (!loginValid) registrationViewModel.userMessage = "please fill you're login!"
