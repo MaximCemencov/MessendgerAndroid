@@ -33,7 +33,11 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
         }
     }
 
-    suspend fun getMessages(offset: Int, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
+    suspend fun getMessages(
+        offset: Int,
+        lazyListState: LazyListState,
+        coroutineScope: CoroutineScope
+    ) {
         val jsonBody = JSONObject()
         jsonBody.put("chat_id", sharedViewModel.current_chat_id)
         jsonBody.put("offset", offset)
@@ -113,10 +117,13 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
             val messageObject = JSONObject(data)
 
             val senderId = messageObject.getInt("sender_id")
-
+            val chatId = messageObject.getInt("chat_id")
             val timeStamp = messageObject.getString("time_of_day")
             val content = messageObject.getString("content")
 
+            if (chatId != sharedViewModel.current_chat_id) {
+                return
+            }
             val newMessage = Message(
                 content,
                 senderId,
@@ -124,12 +131,13 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
                 sharedViewModel.userId == senderId
             )
 
-            messages.add(0, listOf(newMessage))
 
+            messages.add(0, listOf(newMessage))
             coroutineScope.launch {
                 val lastIndex = messages.size - 1
                 lazyListState.scrollToItem(lastIndex)
             }
+
 
         } catch (_: IOException) {
         }

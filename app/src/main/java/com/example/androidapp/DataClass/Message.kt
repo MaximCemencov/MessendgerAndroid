@@ -7,3 +7,8 @@ data class Message(
     val timeStamp: String,
     val hasYour: Boolean
 )
+
+data class MenuItem(
+    val id: Int,
+    val name: String
+)

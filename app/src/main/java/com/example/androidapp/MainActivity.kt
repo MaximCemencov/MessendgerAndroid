@@ -12,7 +12,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -31,11 +30,16 @@ import com.example.androidapp.viewModels.createChat.MainChatScreenViewModel
 import com.example.androidapp.websocket.MyWebSocketListener
 import com.google.firebase.FirebaseApp
 import createRequest
+import okhttp3.WebSocket
 
 class MainActivity : ComponentActivity() {
+    private lateinit var webSocket: WebSocket
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
+
+
 
         val sharedPreferencesManager = SharedPreferencesManager(this)
         sharedPreferencesManager.saveBoolean("isInApp", true)
@@ -55,7 +59,7 @@ class MainActivity : ComponentActivity() {
             val messagesViewModel = MessagesViewModel(sharedViewModel)
             val registrationViewModel = RegistrationViewModel(sharedViewModel)
             val loginViewModel = LoginViewModel(sharedViewModel)
-            val createChatViewModel = viewModel<CreateChatViewModel>()
+            val createChatViewModel = CreateChatViewModel(sharedViewModel)
             val mainChatScreenViewModel = MainChatScreenViewModel(sharedViewModel)
 
             val navController = rememberNavController()
@@ -67,6 +71,14 @@ class MainActivity : ComponentActivity() {
                 sharedViewModel,
                 coroutineScope,
                 lazyListState
+            )
+
+
+
+
+            webSocket = sharedViewModel.client.newWebSocket(
+                createRequest(sharedViewModel),
+                webSocketListener
             )
 
             val isDarkTheme = sharedViewModel.getTheme()
@@ -95,14 +107,14 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("create_chat") {
-                        CreateChat(sharedViewModel, navController, isDarkTheme, createChatViewModel)
+                        CreateChat(navController, isDarkTheme, createChatViewModel)
                     }
                     composable("messages_screen") {
                         MessagesScreen(
                             sharedViewModel,
                             navController,
                             messagesViewModel,
-                            sharedViewModel.client.newWebSocket(createRequest(sharedViewModel), webSocketListener),
+                            webSocket,
                             isDarkTheme,
                             coroutineScope,
                             lazyListState
@@ -115,6 +127,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 
     override fun onStop() {
         val sharedPreferencesManager = SharedPreferencesManager(this)

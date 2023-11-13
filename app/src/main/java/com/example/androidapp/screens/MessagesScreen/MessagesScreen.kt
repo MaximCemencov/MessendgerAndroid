@@ -91,7 +91,6 @@ fun MessagesScreen(
             navigationIcon = {
                 IconButton(onClick = {
                     navController.popBackStack()
-
                 }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = null, tint = textColor)
                 }

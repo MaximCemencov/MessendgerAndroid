@@ -35,14 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.androidapp.features.MyColors
-import com.example.androidapp.viewModels.SharedViewModel
 import com.example.androidapp.viewModels.createChat.CreateChatViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateChat(
-    sharedViewModel: SharedViewModel,
     navController: NavHostController,
     isDarkTheme: Boolean,
     viewModel: CreateChatViewModel
@@ -54,9 +52,6 @@ fun CreateChat(
     val users by viewModel.users.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val errorMessage by viewModel.errorText.collectAsState()
-
-    sharedViewModel.loadFromSharedPreferences()
-    viewModel.userId1 = sharedViewModel.userId
 
     val count = users.size
 
@@ -159,7 +154,7 @@ fun CreateChat(
                     Button(
                         onClick = {
                             coroutineScope.launch {
-                                viewModel.createChat(user, navController, sharedViewModel)
+                                viewModel.createChat(user, navController)
                             }
                         },
                         shape = RoundedCornerShape(size = 30.dp),

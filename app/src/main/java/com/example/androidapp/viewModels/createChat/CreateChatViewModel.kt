@@ -26,7 +26,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
-class CreateChatViewModel: ViewModel() {
+class CreateChatViewModel(private val sharedViewModel: SharedViewModel): ViewModel() {
 
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
@@ -38,7 +38,6 @@ class CreateChatViewModel: ViewModel() {
     private val _isSearching = MutableStateFlow(false)
     val isSearching = _isSearching.asStateFlow()
 
-    var userId1 = 0
 
     private val _users = MutableStateFlow(listOf<Users>())
     @OptIn(FlowPreview::class)
@@ -98,7 +97,7 @@ class CreateChatViewModel: ViewModel() {
                     val userName = userObject.getString("user_name")
 
 
-                    if (userId.toInt() != userId1) {
+                    if (userId.toInt() != sharedViewModel.userId) {
                         // Создаем объект Users и добавляем его в список
                         val user = Users(userId, userName)
                         allUsers.add(user)
@@ -120,10 +119,9 @@ class CreateChatViewModel: ViewModel() {
     suspend fun createChat(
         user: Users,
         navController: NavHostController,
-        sharedViewModel: SharedViewModel
     ) {
         val jsonBody = JSONObject()
-        jsonBody.put("user_id_1", userId1)
+        jsonBody.put("user_id_1", sharedViewModel.userId)
         jsonBody.put("user_id_2", user.userId)
         jsonBody.put("login", sharedViewModel.login)
         jsonBody.put("password", sharedViewModel.password)
@@ -135,7 +133,6 @@ class CreateChatViewModel: ViewModel() {
             .url("$mainUrl/chat_creating")
             .post(requestBody)
             .build()
-
 
         try {
             val response = withContext(Dispatchers.IO) {
