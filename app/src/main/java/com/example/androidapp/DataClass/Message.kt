@@ -2,6 +2,7 @@ package com.example.androidapp.DataClass
 
 
 data class Message(
+    val id: Int,
     val content: String,
     val owner: Int,
     val timeStamp: String,

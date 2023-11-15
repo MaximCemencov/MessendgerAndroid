@@ -75,6 +75,12 @@ class MainActivity : ComponentActivity() {
 
 
 
+//            LaunchedEffect(true) {
+//                while (true) {
+//
+//                    delay(60000L)
+//                }
+//            }
 
             webSocket = sharedViewModel.client.newWebSocket(
                 createRequest(sharedViewModel),

@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.androidapp.DataClass.Message
 import com.example.androidapp.features.getCurrentDateTimeInUTC
 import com.example.androidapp.features.limit
@@ -12,6 +13,7 @@ import com.example.androidapp.features.parseCustomTime
 import com.example.androidapp.viewModels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -27,17 +29,18 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
     var messages = mutableStateListOf(listOf<Message>())
     val textState = mutableStateOf("")
 
+
+    val isEdit = mutableStateOf(false)
+    val editedTextState = mutableStateOf("")
+    val editedFinished = mutableStateOf(false)
+
     fun clearMessages() {
         if (messages.isNotEmpty()) {
             messages.clear()
         }
     }
 
-    suspend fun getMessages(
-        offset: Int,
-        lazyListState: LazyListState,
-        coroutineScope: CoroutineScope
-    ) {
+    suspend fun getMessages(offset: Int, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
         val jsonBody = JSONObject()
         jsonBody.put("chat_id", sharedViewModel.current_chat_id)
         jsonBody.put("offset", offset)
@@ -67,11 +70,13 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
                 for (i in 0 until jsonArray.length()) {
                     val jsonObject = jsonArray.getJSONObject(i)
 
+                    val messageId = jsonObject.getInt("id")
                     val senderId = jsonObject.getInt("sender_id")
                     val content = jsonObject.getString("content")
                     val timeStamp = jsonObject.getString("time_stamp")
 
                     val message = Message(
+                        messageId,
                         content,
                         senderId,
                         parseCustomTime(timeStamp)!!,
@@ -94,11 +99,74 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
         }
     }
 
+    fun workWithMessages(data: String, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
+        try {
+            val messageObject = JSONObject(data)
 
-    fun newMessage(webSocket: WebSocket) {
-        if (textState.value.isBlank()) {
-            return
+            when (messageObject.getString("type")) {
+                "new_message" -> {
+                    val messageId = messageObject.getInt("message_id")
+                    val senderId = messageObject.getInt("sender_id")
+                    val chatId = messageObject.getInt("chat_id")
+                    val timeStamp = messageObject.getString("time_of_day")
+                    val content = messageObject.getString("content")
+
+                    if (chatId != sharedViewModel.current_chat_id) {
+                        return
+                    }
+                    val newMessage = Message(
+                        messageId,
+                        content,
+                        senderId,
+                        parseCustomTime(timeStamp)!!,
+                        sharedViewModel.userId == senderId
+                    )
+
+                    messages.add(0, listOf(newMessage))
+                    coroutineScope.launch {
+                        val lastIndex = messages.size - 1
+                        lazyListState.scrollToItem(lastIndex)
+                    }
+                }
+                "updated_message" -> {
+                    val messageId = messageObject.getInt("message_id")
+                    val senderId = messageObject.getInt("sender_id")
+                    val chatId = messageObject.getInt("chat_id")
+                    val timeStamp = messageObject.getString("time_of_day")
+                    val newContent = messageObject.getString("new_content")
+
+                    val updatedMessageIndex = messages.indexOfFirst { it[0].id == messageId }
+
+                    if (chatId != sharedViewModel.current_chat_id) {
+                        return
+                    }
+
+                    messages[updatedMessageIndex] = listOf(
+                        Message(
+                            messageId,
+                            newContent,
+                            senderId,
+                            parseCustomTime(timeStamp)!!,
+                            sharedViewModel.userId == senderId
+                        )
+                    )
+
+                }
+                "delete_message" -> {
+                    val messageId = messageObject.getInt("message_id")
+
+                    val deletedMessageIndex = messages.indexOfFirst { it[0].id == messageId }
+
+                    if (deletedMessageIndex != -1)
+                    messages.removeAt(deletedMessageIndex)
+                }
+            }
+        } catch (_: IOException) {
         }
+    }
+
+    fun sendMessage(webSocket: WebSocket) {
+        if (textState.value.isBlank()) { return }
 
         val jsonBody = JSONObject()
         sharedViewModel.loadFromSharedPreferences()
@@ -108,38 +176,46 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
         jsonBody.put("content", textState.value)
         textState.value = ""
         jsonBody.put("time_of_day", getCurrentDateTimeInUTC())
+        jsonBody.put("type", "new_message")
 
         webSocket.send(jsonBody.toString())
     }
 
-    fun getNewMessage(data: String, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
-        try {
-            val messageObject = JSONObject(data)
+    fun updateMessage(mess: Message, webSocket: WebSocket) {
+        isEdit.value = true
+        editedTextState.value = mess.content
+        val jsonBody = JSONObject()
 
-            val senderId = messageObject.getInt("sender_id")
-            val chatId = messageObject.getInt("chat_id")
-            val timeStamp = messageObject.getString("time_of_day")
-            val content = messageObject.getString("content")
-
-            if (chatId != sharedViewModel.current_chat_id) {
-                return
-            }
-            val newMessage = Message(
-                content,
-                senderId,
-                parseCustomTime(timeStamp)!!,
-                sharedViewModel.userId == senderId
-            )
-
-
-            messages.add(0, listOf(newMessage))
-            coroutineScope.launch {
-                val lastIndex = messages.size - 1
-                lazyListState.scrollToItem(lastIndex)
+        viewModelScope.launch {
+            while (!editedFinished.value) {
+                delay(100)
             }
 
+            editedFinished.value = false
 
-        } catch (_: IOException) {
+            if (editedTextState.value.isBlank()) {
+                editedFinished.value = false
+                isEdit.value = false
+                editedTextState.value = ""
+                return@launch
+            }
+
+            jsonBody.put("message_id", mess.id)
+            jsonBody.put("new_content", editedTextState.value)
+            jsonBody.put("type", "update_message")
+
+            webSocket.send(jsonBody.toString())
+            isEdit.value = false
+            editedTextState.value = ""
         }
+    }
+
+    fun deleteMessage(mess: Message, webSocket: WebSocket) {
+        val jsonBody = JSONObject()
+
+        jsonBody.put("deleting_message_id", mess.id)
+        jsonBody.put("type", "archive_message")
+
+        webSocket.send(jsonBody.toString())
     }
 }

@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -27,17 +28,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.androidapp.DataClass.MenuItem
 import com.example.androidapp.DataClass.Message
+import com.example.androidapp.features.MyColors
+import com.example.androidapp.viewModels.MessagesViewModel.MessagesViewModel
+import okhttp3.WebSocket
 
 @Composable
-fun MessageItem(mess: Message) {
+fun MessageItem(
+    mess: Message,
+    isDarkTheme: Boolean,
+    viewModel: MessagesViewModel,
+    webSocket: WebSocket
+) {
     var expanded by remember { mutableStateOf(false) }
-    val clipboardManager: ClipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboardManager.current
+    var showAlert by remember { mutableStateOf(false) }
 
-    val items = listOf(
-        MenuItem(1, "Copy"),
-        MenuItem(2, "Edit"),
-        MenuItem(3, "Delete")
-    )
+    val colors = MyColors
+    val textColor = if (isDarkTheme) colors.textColorDarkTheme else colors.textColorWhiteTheme
+    val backgroundColor = if (isDarkTheme) colors.backgroundColorDarkTheme else colors.backgroundColorWhiteTheme
+    val buttonColor = if (isDarkTheme) colors.buttonColorDarkTheme else colors.buttonColorWhiteTheme
+
+
+    val items = buildList {
+        add(MenuItem(1, "Copy"))
+        if (mess.hasYour) {
+            add(MenuItem(2, "Edit"))
+        }
+        add(MenuItem(3, "Delete"))
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -79,6 +97,7 @@ fun MessageItem(mess: Message) {
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
+                modifier = Modifier.background(backgroundColor)
             ) {
                 items.forEach { item ->
                     Text(
@@ -88,15 +107,57 @@ fun MessageItem(mess: Message) {
                             .padding(10.dp)
                             .clickable(onClick = {
                                 when (item.id) {
-                                    1 -> {
-                                        clipboardManager.setText(AnnotatedString((mess.content)))
-                                    }
+                                    1 -> clipboardManager.setText(AnnotatedString((mess.content)))
+                                    2 -> viewModel.updateMessage(mess, webSocket)
+                                    3 -> showAlert = true
                                 }
                                 expanded = false
-                            })
+                            }),
+                        color = if (item.id == 3) {
+                            Color.Red
+                        } else {
+                            textColor
+                        }
                     )
                 }
             }
         }
+    }
+
+    if (showAlert) {
+        AlertDialog(
+            containerColor = buttonColor,
+            title = {
+                Text(
+                    text = "Confirm delete",
+                    color = textColor
+                ) },
+            text = {
+                Text(
+                    text = "you really want to delete: ${mess.content}",
+                    color = textColor
+                ) },
+            onDismissRequest = { showAlert = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteMessage(mess, webSocket)
+                        showAlert = false
+                    }
+                ) {
+                    Text("Delete",
+                        color =  Color.Red
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAlert = false
+                }) {
+                    Text("Cancel",
+                        color = textColor
+                    ) }
+            }
+        )
     }
 }

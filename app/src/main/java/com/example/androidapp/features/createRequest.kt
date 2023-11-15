@@ -5,6 +5,6 @@ import okhttp3.Request
 fun createRequest(sharedViewModel: SharedViewModel): Request {
 
     return Request.Builder()
-        .url("$websocketUrl?login=${sharedViewModel.login}&password=${sharedViewModel.password}")
+        .url("$websocketUrl?login=${sharedViewModel.login}&password=${sharedViewModel.password}&id=${sharedViewModel.userId}")
         .build()
 }

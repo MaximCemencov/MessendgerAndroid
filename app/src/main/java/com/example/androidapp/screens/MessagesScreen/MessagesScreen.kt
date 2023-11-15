@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -133,20 +134,29 @@ fun MessagesScreen(
 
 
             items(viewModel.messages.flatten().reversed()) { mess ->
-                MessageItem(mess)
+                MessageItem(mess, isDarkTheme, viewModel, webSocket)
             }
         }
 
 
 
         OutlinedTextField(
-            value = viewModel.textState.value,
+            value = if (viewModel.isEdit.value) viewModel.editedTextState.value else viewModel.textState.value,
             onValueChange = { newValue ->
-                if (newValue.length <= 800) {
-                    viewModel.textState.value = newValue
+                if (viewModel.isEdit.value) {
+                    if (newValue.length <= 800) {
+                        viewModel.editedTextState.value = newValue
+                    } else {
+                        viewModel.editedTextState.value = newValue.take(800)
+                    }
                 } else {
-                    viewModel.textState.value = newValue.take(800)
+                    if (newValue.length <= 800) {
+                        viewModel.textState.value = newValue
+                    } else {
+                        viewModel.textState.value = newValue.take(800)
+                    }
                 }
+
             },
             placeholder = {
                 Text(
@@ -159,16 +169,26 @@ fun MessagesScreen(
                 .fillMaxWidth()
                 .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
             trailingIcon = {
-                IconButton(
-                    onClick = {
-                        viewModel.newMessage(webSocket)
+                if (viewModel.isEdit.value) {
+                    IconButton(onClick = {
+                        viewModel.editedFinished.value = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Done,
+                            contentDescription = null,
+                            tint = textColor
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = null,
-                        tint = textColor
-                    )
+                } else {
+                    IconButton(onClick = {
+                            viewModel.sendMessage(webSocket)
+                        }) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = null,
+                            tint = textColor
+                        )
+                    }
                 }
             },
             shape = RoundedCornerShape(15.dp),

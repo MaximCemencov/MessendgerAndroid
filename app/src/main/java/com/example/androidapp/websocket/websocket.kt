@@ -37,7 +37,7 @@ class MyWebSocketListener(
     override fun onMessage(webSocket: WebSocket, text: String) {
         super.onMessage(webSocket, text)
         messagesViewModel.viewModelScope.launch {
-            messagesViewModel.getNewMessage(text, lazyListState, coroutineScope)
+            messagesViewModel.workWithMessages(text, lazyListState, coroutineScope)
         }
     }
 
