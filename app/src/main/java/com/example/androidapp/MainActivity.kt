@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
@@ -30,6 +31,7 @@ import com.example.androidapp.viewModels.createChat.MainChatScreenViewModel
 import com.example.androidapp.websocket.MyWebSocketListener
 import com.google.firebase.FirebaseApp
 import createRequest
+import kotlinx.coroutines.delay
 import okhttp3.WebSocket
 
 class MainActivity : ComponentActivity() {
@@ -75,17 +77,16 @@ class MainActivity : ComponentActivity() {
 
 
 
-//            LaunchedEffect(true) {
-//                while (true) {
-//
-//                    delay(60000L)
-//                }
-//            }
+            LaunchedEffect(true) {
+                while (true) {
+                    webSocket = sharedViewModel.client.newWebSocket(
+                        createRequest(sharedViewModel),
+                        webSocketListener
+                    )
+                    delay(10000L)
+                }
+            }
 
-            webSocket = sharedViewModel.client.newWebSocket(
-                createRequest(sharedViewModel),
-                webSocketListener
-            )
 
             val isDarkTheme = sharedViewModel.getTheme()
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,6 +58,7 @@ fun MessagesScreen(
     coroutineScope: CoroutineScope,
     lazyListState: LazyListState
 ) {
+
     val page = remember { mutableStateOf(0) }
     val loading = remember { mutableStateOf(false) }
 
@@ -170,14 +173,26 @@ fun MessagesScreen(
                 .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
             trailingIcon = {
                 if (viewModel.isEdit.value) {
-                    IconButton(onClick = {
-                        viewModel.editedFinished.value = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Done,
-                            contentDescription = null,
-                            tint = textColor
-                        )
+                    Row {
+                        IconButton(onClick = {
+                            viewModel.editedTextState.value = ""
+                            viewModel.editedFinished.value = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = textColor
+                            )
+                        }
+                        IconButton(onClick = {
+                            viewModel.editedFinished.value = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Done,
+                                contentDescription = null,
+                                tint = textColor
+                            )
+                        }
                     }
                 } else {
                     IconButton(onClick = {

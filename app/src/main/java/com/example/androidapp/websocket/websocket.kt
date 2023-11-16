@@ -39,6 +39,7 @@ class MyWebSocketListener(
         messagesViewModel.viewModelScope.launch {
             messagesViewModel.workWithMessages(text, lazyListState, coroutineScope)
         }
+        Log.d(TAG, "onMessage: $text")
     }
 
     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {

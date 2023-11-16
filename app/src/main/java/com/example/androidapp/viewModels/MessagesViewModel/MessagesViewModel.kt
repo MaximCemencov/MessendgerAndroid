@@ -191,7 +191,6 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
                 delay(100)
             }
 
-            editedFinished.value = false
 
             if (editedTextState.value.isBlank()) {
                 editedFinished.value = false
@@ -205,6 +204,7 @@ class MessagesViewModel(private val sharedViewModel: SharedViewModel) : ViewMode
             jsonBody.put("type", "update_message")
 
             webSocket.send(jsonBody.toString())
+            editedFinished.value = false
             isEdit.value = false
             editedTextState.value = ""
         }
