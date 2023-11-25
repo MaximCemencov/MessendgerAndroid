@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -62,8 +61,7 @@ class CreateChatViewModel(private val sharedViewModel: SharedViewModel): ViewMod
 
     private suspend fun parseUsers(userName: String): List<Users> {
         _errorText.value = ""
-        val client = OkHttpClient.Builder()
-            .build()
+
 
         val jsonBody = JSONObject()
         jsonBody.put("user_name", userName)
@@ -80,7 +78,7 @@ class CreateChatViewModel(private val sharedViewModel: SharedViewModel): ViewMod
 
         try {
             val response = withContext(Dispatchers.IO) {
-                client.newCall(request).execute()
+                sharedViewModel.httpsClient.newCall(request).execute()
             }
             if (response.isSuccessful) {
                 val data = response.body?.string()
@@ -95,11 +93,11 @@ class CreateChatViewModel(private val sharedViewModel: SharedViewModel): ViewMod
 
                     val userId = userObject.getString("id")
                     val userName = userObject.getString("user_name")
-
+                    val hasAvatar = userObject.getBoolean("avatar")
 
                     if (userId.toInt() != sharedViewModel.userId) {
                         // Создаем объект Users и добавляем его в список
-                        val user = Users(userId, userName)
+                        val user = Users(userId, userName, hasAvatar)
                         allUsers.add(user)
                     }
                 }
@@ -136,7 +134,7 @@ class CreateChatViewModel(private val sharedViewModel: SharedViewModel): ViewMod
 
         try {
             val response = withContext(Dispatchers.IO) {
-                sharedViewModel.client.newCall(request).execute()
+                sharedViewModel.httpsClient.newCall(request).execute()
             }
             if (response.isSuccessful) {
                 navController.navigate("main_screen")

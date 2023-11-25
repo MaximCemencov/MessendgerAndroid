@@ -8,17 +8,21 @@ import androidx.navigation.NavHostController
 import com.example.androidapp.features.mainUrl
 import com.example.androidapp.viewModels.SharedViewModel
 import com.google.firebase.messaging.FirebaseMessaging
+import createRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.WebSocketListener
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
 
-class LoginViewModel(private val sharedViewModel: SharedViewModel) : ViewModel() {
+class LoginViewModel(
+    private val sharedViewModel: SharedViewModel,
+    private val webSocketListener: WebSocketListener) : ViewModel() {
     var login by mutableStateOf("")
     var password by mutableStateOf("")
     var passwordVisible by mutableStateOf(false)
@@ -42,7 +46,7 @@ class LoginViewModel(private val sharedViewModel: SharedViewModel) : ViewModel()
                 .build()
 
             val response = withContext(Dispatchers.IO) {
-                sharedViewModel.client.newCall(request).execute()
+                sharedViewModel.httpsClient.newCall(request).execute()
             }
 
             if (response.isSuccessful) {
@@ -54,6 +58,7 @@ class LoginViewModel(private val sharedViewModel: SharedViewModel) : ViewModel()
                     sharedViewModel.login = login
                     sharedViewModel.password = password
                     sharedViewModel.hasLogIn = true
+                    sharedViewModel.webSocket = sharedViewModel.client.newWebSocket(createRequest(sharedViewModel), webSocketListener)
                     sharedViewModel.saveToSharedPreferences()
                     navController.navigate("main_screen")
                 } catch (_: JSONException) {}

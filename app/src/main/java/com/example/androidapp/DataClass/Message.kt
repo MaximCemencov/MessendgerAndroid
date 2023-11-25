@@ -6,7 +6,10 @@ data class Message(
     val content: String,
     val owner: Int,
     val timeStamp: String,
-    val hasYour: Boolean
+    val hasYour: Boolean,
+    var hasViewed: Boolean,
+    val hasEdited: Boolean,
+
 )
 
 data class MenuItem(

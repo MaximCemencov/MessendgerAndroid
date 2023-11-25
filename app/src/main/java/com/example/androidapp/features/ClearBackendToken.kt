@@ -9,8 +9,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
-suspend fun ClearToken(client: OkHttpClient, login: String, password: String) {
+suspend fun ClearToken(client: OkHttpClient, login: String, password: String, id: Int) {
     val jsonBody = JSONObject()
+    jsonBody.put("id", id)
     jsonBody.put("login", login)
     jsonBody.put("password", password)
 

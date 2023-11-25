@@ -11,7 +11,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
@@ -41,7 +40,7 @@ class RegistrationViewModel(private val sharedViewModel: SharedViewModel) : View
 
         try {
             val response = withContext(Dispatchers.IO) {
-                sharedViewModel.client.newCall(request).execute()
+                sharedViewModel.httpsClient.newCall(request).execute()
             }
 
              if (response.isSuccessful) {

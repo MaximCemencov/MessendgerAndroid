@@ -12,70 +12,88 @@ import androidx.lifecycle.viewModelScope
 import com.example.androidapp.features.ClearToken
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import okhttp3.WebSocket
+import java.util.concurrent.TimeUnit
+
+
+
 
 class SharedViewModel(private val context: Context) : ViewModel() {
-    val client = OkHttpClient()
+    val client: OkHttpClient = OkHttpClient.Builder()
+        .retryOnConnectionFailure(true)
+        .pingInterval(5, TimeUnit.SECONDS)
+        .build()
+
+    val httpsClient = OkHttpClient.Builder()
+        .retryOnConnectionFailure(true)
+        .connectTimeout(500000, TimeUnit.SECONDS)
+        .pingInterval(5, TimeUnit.SECONDS)
+        .build()
 
 
-    var theme = mutableIntStateOf(1)
+    lateinit var webSocket: WebSocket
 
+    var avatarBase64 by mutableStateOf<String?>(null)
+    var theme by mutableIntStateOf(1)
     var hasLogIn by mutableStateOf(false)
     var login by mutableStateOf("")
     var password by mutableStateOf("")
     var userName by mutableStateOf("")
-    var userId by mutableStateOf(0)
-    var user_id2 by mutableStateOf(0)
-    var user_name2 by mutableStateOf("")
-    var current_chat_id by mutableStateOf(0)
+    var userId by mutableIntStateOf(0)
+    var userId2 by mutableIntStateOf(0)
+    var userName2 by mutableStateOf("")
+    var currentChatId by mutableIntStateOf(0)
 
 
-    // Поле для хранения Context
     @SuppressLint("StaticFieldLeak")
     private val appContext = context.applicationContext
 
     fun saveToSharedPreferences() {
         val sharedPreferences = appContext.getSharedPreferences("my_shared_preferences", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
-        editor.putInt("theme", theme.intValue)
+        editor.putInt("theme", theme)
         editor.putString("password", password)
         editor.putBoolean("hasLogIn", hasLogIn)
         editor.putString("login", login)
         editor.putString("userName", userName)
         editor.putInt("userId", userId)
-        editor.putInt("user_id2", user_id2)
-        editor.putString("user_name2", user_name2)
-        editor.putInt("current_chat_id", current_chat_id)
+        editor.putInt("user_id2", userId2)
+        editor.putString("user_name2", userName2)
+        editor.putInt("current_chat_id", currentChatId)
+        editor.putString("avatarUri", avatarBase64)
 
         editor.apply()
     }
 
-    // Функция для загрузки переменных из SharedPreferences
     fun loadFromSharedPreferences() {
         val sharedPreferences = appContext.getSharedPreferences("my_shared_preferences", Context.MODE_PRIVATE)
 
         password = sharedPreferences.getString("password", "") ?: ""
-        theme.intValue = sharedPreferences.getInt("theme", 0)
+        theme = sharedPreferences.getInt("theme", 0)
         hasLogIn = sharedPreferences.getBoolean("hasLogIn", false)
         login = sharedPreferences.getString("login", "") ?: ""
         userName = sharedPreferences.getString("userName", "") ?: ""
         userId = sharedPreferences.getInt("userId", 0)
-        user_id2 = sharedPreferences.getInt("user_id2", 0)
-        user_name2 = sharedPreferences.getString("user_name2", "") ?: ""
-        current_chat_id = sharedPreferences.getInt("current_chat_id", 0)
+        userId2 = sharedPreferences.getInt("user_id2", 0)
+        userName2 = sharedPreferences.getString("user_name2", "") ?: ""
+        currentChatId = sharedPreferences.getInt("current_chat_id", 0)
+        currentChatId = sharedPreferences.getInt("current_chat_id", 0)
+        avatarBase64 = sharedPreferences.getString("avatarUri", null)
     }
 
     fun logout() {
         viewModelScope.launch {
-            ClearToken(client, login, password)
+            ClearToken(client, login, password, userId)
         }
         hasLogIn = false
         password = ""
         login = ""
         userName = ""
         userId = 0
-        user_id2 = 0
-        user_name2 = ""
-        current_chat_id = 0
+        userId2 = 0
+        userName2 = ""
+        currentChatId = 0
+        avatarBase64 = null
         saveToSharedPreferences()
     }
 
@@ -88,11 +106,11 @@ class SharedViewModel(private val context: Context) : ViewModel() {
 
 
     fun getTheme(): Boolean {
-        return when (theme.intValue) {
+        return when (theme) {
             0 -> false
             1 -> isSystemInDarkTheme()
             2 -> true
-            else -> false // Можно установить значение по умолчанию
+            else -> false
         }
     }
 

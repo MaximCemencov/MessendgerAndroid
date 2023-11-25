@@ -1,5 +1,6 @@
 package com.example.androidapp.screens.Drawer
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,7 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.DrawerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -22,50 +26,81 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.androidapp.R
 import com.example.androidapp.features.MyColors
+import com.example.androidapp.features.generateRandomColor
+import com.example.androidapp.viewModels.Profile.ProfileViewModel
 import com.example.androidapp.viewModels.SharedViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+
 
 @Composable
 fun DrawerBody(
     sharedViewModel: SharedViewModel,
     navController: NavHostController,
     isDarkTheme: Boolean,
-    drawerState: DrawerState,
-    coroutineScope: CoroutineScope,
+    profileViewModel: ProfileViewModel,
 ) {
-    var sliderPosition by remember { mutableFloatStateOf(sharedViewModel.theme.intValue.toFloat()) }
+    var sliderPosition by remember { mutableFloatStateOf(sharedViewModel.theme.toFloat()) }
     val sliderTexts = listOf("White", "Follow System", "Dark")
 
     val colors = MyColors
     val buttonColor = if (isDarkTheme) colors.buttonColorDarkTheme else colors.buttonColorWhiteTheme
     val textColor = if (isDarkTheme) colors.textColorDarkTheme else colors.textColorWhiteTheme
 
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.End
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
+           Modifier
+               .fillMaxWidth()
+               .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = sharedViewModel.userName,
-                color = textColor,
-                fontSize = 24.sp,
-                fontWeight = FontWeight(200)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (sharedViewModel.avatarBase64 == null) {
+                    IconButton(onClick = {
+                        navController.navigate("profile_screen")
+                    }) {
+                        Icon(
+                            Icons.Rounded.Face,
+                            contentDescription = null,
+                            tint = generateRandomColor(),
+                            modifier = Modifier.size(50.dp)
+                        )
+                    }
+                } else {
+                    Image(
+                        bitmap = profileViewModel.base64ToImageBitmap(sharedViewModel.avatarBase64!!)!!
+                            .asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                navController.navigate("profile_screen")
+                            }
+                    )
+                }
+
+                Text(
+                    text = sharedViewModel.userName,
+                    color = textColor,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight(200),
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -74,14 +109,14 @@ fun DrawerBody(
                     fontWeight = FontWeight(200),
                 )
 
-                Spacer(modifier = Modifier.padding(horizontal = 12.5f.dp))
+                Spacer(Modifier.padding(horizontal = 12.5f.dp))
 
                 Slider(
                     modifier = Modifier.width(60.dp),
                     value = sliderPosition,
                     onValueChange = { sliderPosition = it },
                     onValueChangeFinished = {
-                        sharedViewModel.theme.intValue = sliderPosition.toInt()
+                        sharedViewModel.theme = sliderPosition.toInt()
                         sharedViewModel.saveToSharedPreferences()
                     },
                     steps = 1,
@@ -95,34 +130,6 @@ fun DrawerBody(
                     )
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(
-            modifier = Modifier
-                .padding(20.dp)
-                .clickable {
-                    sharedViewModel.logout()
-                    coroutineScope.launch { drawerState.close() }
-                    navController.navigate("registration")
-                },
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Log out",
-                fontWeight = FontWeight(200),
-                color = textColor,
-                modifier = Modifier
-                    .padding(horizontal = 15.dp)
-            )
-            Icon(
-                painter = painterResource(R.drawable.logout),
-                contentDescription = null,
-                tint = textColor,
-                modifier = Modifier.size(25.dp)
-            )
         }
     }
 }
