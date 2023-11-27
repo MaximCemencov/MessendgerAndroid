@@ -1,5 +1,6 @@
 package com.example.androidapp.screens.Items.MessageItem
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -28,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -36,11 +39,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import com.example.androidapp.DataClass.MenuItem
 import com.example.androidapp.DataClass.Message
 import com.example.androidapp.R
 import com.example.androidapp.features.MyColors
 import com.example.androidapp.viewModels.MessagesViewModel.MessagesViewModel
+import com.example.androidapp.viewModels.MessagesViewModel.functions.decodeFileToBitmap
+import com.example.androidapp.viewModels.MessagesViewModel.functions.decodeImage
+import com.example.androidapp.viewModels.MessagesViewModel.functions.getBitmapState
+import com.example.androidapp.viewModels.MessagesViewModel.functions.isFileExistsInFolder
+import com.example.androidapp.viewModels.SharedViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 @Composable
@@ -49,7 +62,9 @@ fun MessageItem(
     isDarkTheme: Boolean,
     viewModel: MessagesViewModel,
     lazyListState: LazyListState,
-    key: Int
+    key: Int,
+    sharedViewModel: SharedViewModel,
+    navController: NavHostController
 ) {
     var expanded by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
@@ -57,8 +72,7 @@ fun MessageItem(
 
     val colors = MyColors
     val textColor = if (isDarkTheme) colors.textColorDarkTheme else colors.textColorWhiteTheme
-    val backgroundColor =
-        if (isDarkTheme) colors.backgroundColorDarkTheme else colors.backgroundColorWhiteTheme
+    val backgroundColor = if (isDarkTheme) colors.backgroundColorDarkTheme else colors.backgroundColorWhiteTheme
     val buttonColor = if (isDarkTheme) colors.buttonColorDarkTheme else colors.buttonColorWhiteTheme
 
     val items = buildList {
@@ -66,38 +80,16 @@ fun MessageItem(
         if (mess.hasYour) {
             add(MenuItem(2, "Edit"))
         }
-        add(MenuItem(3, "Delete"))
+        if (mess.fileName != "null") {
+            add(MenuItem(3, "Save To Download"))
+        }
+        add(MenuItem(4, "Delete"))
     }
     val isVisible by remember(lazyListState, key) {
         derivedStateOf {
             isItemVisible(lazyListState, key)
         }
     }
-
-//    var painter by remember {
-//        mutableStateOf<ImageBitmap?>(null)
-//    }
-
-//    if (mess.fileName != "null") {
-//        val fileUri = viewModel.getFileUri(mess.fileName)
-//        if (viewModel.isFileExistsInDirectory(mess.fileName)) {
-//            Log.d("avopa", "1")
-//            LaunchedEffect(true) {
-//                viewModel.viewModelScope.launch {
-//                    painter = fileUri?.let { viewModel.uriToImageBitmap(it) }
-//                }
-//            }
-//        } else {
-//            Log.d("avopa", "2")
-//            viewModel.downloadFile(mess)
-//            LaunchedEffect(true) {
-//                viewModel.viewModelScope.launch {
-//                    val downloadedFileUri = viewModel.getFileUri(mess.fileName)
-//                    painter = downloadedFileUri?.let { viewModel.uriToImageBitmap(it) }
-//                }
-//            }
-//        }
-//    }
 
 
     SideEffect {
@@ -124,48 +116,101 @@ fun MessageItem(
                 )
                 .padding(horizontal = 5.dp, vertical = 5.dp)
                 .clickable { expanded = true }
-                .width(IntrinsicSize.Max) // сохраняем ширину
+                .width(IntrinsicSize.Max)
         ) {
-//            if (mess.fileName != "null" && mess.fileType != "null") {
-//                when (mess.fileType) {
-//                    "image", "other" -> {
-//                        painter?.let {
-//                            Image(
-//                                bitmap = it,
-//                                contentDescription = null,
-//                                modifier = Modifier
-//                                    .clip(RoundedCornerShape(20.dp))
-//                            )
-//                        }
-//                    }
-////
-////                    "other" -> {
-////                        Row(
-////                            modifier = Modifier
-////                                .clip(RoundedCornerShape(10.dp))
-////                                .background(buttonColor)
-////                                .padding(10.dp),
-////                            verticalAlignment = Alignment.CenterVertically,
-////                            horizontalArrangement = Arrangement.SpaceBetween
-////                        ) {
-////                            Icon(
-////                                painter = painterResource(R.drawable.download),
-////                                contentDescription = null,
-////                                tint = textColor,
-////                                modifier = Modifier
-////                                    .size(40.dp)
-////                                    .clickable {
-////
-////                                    }
-////                            )
-////                            Column {
-////                                Text(text = mess.fileName, color = textColor)
-////                                Text(text = mess.fileType, color = textColor)
-////                            }
-////                        }
-////                    }
-//                }
-//            }
+            if (mess.fileName != "null" && mess.fileType != "null") {
+                var fileDownloaded by remember { mutableStateOf(isFileExistsInFolder(mess.fileName, viewModel.appDir)) }
+
+                when (mess.fileType) {
+                    "image" -> {
+                        LaunchedEffect(true) {
+                            if (fileDownloaded && getBitmapState(mess.fileName, viewModel.bitmapMap).value == null) {
+                                withContext(Dispatchers.IO) {
+                                    val decodedBitmap = decodeImage(mess.fileName, viewModel.appDir)
+                                    getBitmapState(mess.fileName, viewModel.bitmapMap).value = decodedBitmap
+                                }
+                            }
+                        }
+                        val bitmapState = getBitmapState(mess.fileName, viewModel.bitmapMap)
+
+                        if (fileDownloaded) {
+                            bitmapState.value?.let { decodedBitmap ->
+                                Column(Modifier.padding(bottom = 5.dp)) {
+                                    Image(
+                                        bitmap = decodedBitmap.asImageBitmap(),
+                                        contentDescription = null,
+                                        modifier = Modifier.clip(RoundedCornerShape(22.dp))
+                                            .clickable {
+                                                sharedViewModel.selectedBitmap = Pair(decodedBitmap, mess.fileName)
+                                                navController.navigate("ImageViewed")
+                                            }
+                                    )
+                                }
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .size(175.dp)
+                                    .background(buttonColor)
+                                    .clip(RoundedCornerShape(22.dp)),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                TextButton(onClick = {
+                                    viewModel.viewModelScope.launch(Dispatchers.IO) {
+                                        val file = viewModel.downloadFileAsync(mess).await()
+                                        val decodedBitmap = decodeFileToBitmap(file)
+                                        getBitmapState(mess.fileName, viewModel.bitmapMap).value =
+                                            decodedBitmap
+                                        fileDownloaded = true
+                                    }
+                                }) {
+                                    Column (
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.download),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(42.dp),
+                                            tint = textColor
+                                        )
+                                        Text(
+                                            text = mess.fileName,
+                                            color = textColor,
+                                            fontSize = 15.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    "other" -> {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(buttonColor)
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.download),
+                                contentDescription = null,
+                                tint = textColor,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clickable { viewModel.downloadFileAsync(mess, true) }
+                            )
+                            Column {
+                                Text(text = mess.fileName, color = textColor)
+                            }
+                        }
+                    }
+                }
+            }
+
 
 
             Column(Modifier.padding(horizontal = 5.dp)) {
@@ -233,11 +278,14 @@ fun MessageItem(
                                 when (item.id) {
                                     1 -> clipboardManager.setText(AnnotatedString((mess.content)))
                                     2 -> viewModel.updateMessage(mess)
-                                    3 -> showAlert = true
+                                    3 -> viewModel.downloadFileAsync(mess, true)
+                                    4 -> {
+                                        showAlert = true
+                                    }
                                 }
                                 expanded = false
                             },
-                        color = if (item.id == 3) {
+                        color = if (item.id == 4) {
                             Color.Red
                         } else {
                             textColor
@@ -246,7 +294,6 @@ fun MessageItem(
                 }
             }
         }
-
     }
 
 

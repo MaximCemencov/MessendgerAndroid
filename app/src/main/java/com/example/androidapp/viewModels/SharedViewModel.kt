@@ -3,6 +3,7 @@ package com.example.androidapp.viewModels
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -14,9 +15,6 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.WebSocket
 import java.util.concurrent.TimeUnit
-
-
-
 
 class SharedViewModel(private val context: Context) : ViewModel() {
     val client: OkHttpClient = OkHttpClient.Builder()
@@ -30,6 +28,7 @@ class SharedViewModel(private val context: Context) : ViewModel() {
         .pingInterval(5, TimeUnit.SECONDS)
         .build()
 
+    var selectedBitmap by mutableStateOf<Pair<Bitmap, String>?>(null)
 
     lateinit var webSocket: WebSocket
 
@@ -65,7 +64,7 @@ class SharedViewModel(private val context: Context) : ViewModel() {
         editor.apply()
     }
 
-    fun loadFromSharedPreferences() {
+    private fun loadFromSharedPreferences() {
         val sharedPreferences = appContext.getSharedPreferences("my_shared_preferences", Context.MODE_PRIVATE)
 
         password = sharedPreferences.getString("password", "") ?: ""

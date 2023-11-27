@@ -40,7 +40,7 @@ class MyWebSocketListener(
         reconnect()
     }
 
-    fun reconnect() {
+    private fun reconnect() {
         Log.d(TAG, "Reconnecting...")
 
         sharedViewModel.webSocket.cancel()

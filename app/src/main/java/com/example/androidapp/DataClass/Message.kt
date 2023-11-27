@@ -9,7 +9,8 @@ data class Message(
     val hasYour: Boolean,
     var hasViewed: Boolean,
     val hasEdited: Boolean,
-
+    val fileName: String,
+    val fileType: String
 )
 
 data class MenuItem(

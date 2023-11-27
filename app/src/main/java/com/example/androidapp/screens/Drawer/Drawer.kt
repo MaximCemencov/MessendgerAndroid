@@ -45,7 +45,7 @@ fun DrawerBody(
     sharedViewModel: SharedViewModel,
     navController: NavHostController,
     isDarkTheme: Boolean,
-    profileViewModel: ProfileViewModel,
+    profileViewModel: ProfileViewModel
 ) {
     var sliderPosition by remember { mutableFloatStateOf(sharedViewModel.theme.toFloat()) }
     val sliderTexts = listOf("White", "Follow System", "Dark")
@@ -60,9 +60,9 @@ fun DrawerBody(
         horizontalAlignment = Alignment.End
     ) {
         Row(
-           Modifier
-               .fillMaxWidth()
-               .padding(10.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -79,18 +79,20 @@ fun DrawerBody(
                         )
                     }
                 } else {
-                    Image(
-                        bitmap = profileViewModel.base64ToImageBitmap(sharedViewModel.avatarBase64!!)!!
-                            .asImageBitmap(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                navController.navigate("profile_screen")
-                            }
-                    )
+                    if (sharedViewModel.avatarBase64 != null) {
+                        Image(
+                            bitmap = profileViewModel.base64ToImageBitmap(sharedViewModel.avatarBase64!!)!!
+                                .asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    navController.navigate("profile_screen")
+                                }
+                        )
+                    }
                 }
 
                 Text(

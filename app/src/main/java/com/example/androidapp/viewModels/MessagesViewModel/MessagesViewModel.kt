@@ -1,53 +1,75 @@
 package com.example.androidapp.viewModels.MessagesViewModel
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Environment
 import android.util.Log
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.androidapp.DataClass.Message
+import com.example.androidapp.FileTypes.FileType
 import com.example.androidapp.features.getCurrentDateTimeInUTC
 import com.example.androidapp.features.limit
 import com.example.androidapp.features.mainUrl
 import com.example.androidapp.features.parseCustomTime
+import com.example.androidapp.viewModels.MessagesViewModel.functions.copyFile
+import com.example.androidapp.viewModels.MessagesViewModel.functions.createFileFromInputStream
+import com.example.androidapp.viewModels.MessagesViewModel.functions.getFileFromUri
 import com.example.androidapp.viewModels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
+import java.io.InputStream
 
 class MessagesViewModel(
     private val sharedViewModel: SharedViewModel,
     private val lazyListState: LazyListState,
     private val coroutineScope: CoroutineScope,
+    private val context: Context
 ) : ViewModel() {
+    val messagesViewModelContext = context
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
 
-//    var selectedFiles = mutableStateListOf<Pair<Uri, FileType>>()
+    var selectedFiles = mutableStateListOf<Pair<Uri, FileType>>()
 
-    val textState = mutableStateOf("")
+    var textState by mutableStateOf("")
 
     var currentPage by mutableIntStateOf(0)
-    val isLoading = mutableStateOf(false)
+    var isLoading by mutableStateOf(false)
 
     val isEdit = mutableStateOf(false)
-    val editedTextState = mutableStateOf("")
-    val editedFinished = mutableStateOf(false)
-//    val appDir = File(context.filesDir, "messenger_folder")
+    var editedTextState by mutableStateOf("")
+    var editedFinished by mutableStateOf(false)
+
+    val bitmapMap = mutableMapOf<String, MutableState<Bitmap?>>()
+    val appDir = File(context.filesDir, "messenger_folder")
 
 
     fun clearMessages() {
@@ -55,45 +77,6 @@ class MessagesViewModel(
             _messages.value = emptyList()
         }
     }
-
-//    fun getFileUri(fileName: String): Uri? {
-//        val file = File(appDir, fileName)
-//
-//        return if (file.exists()) {
-//            // Передайте в FileProvider контекст вашего приложения и имя файла
-//            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-//        } else {
-//            null
-//        }
-//    }
-//    fun getFileType(uri: String): FileType {
-//        val fileExtension = uri.substringAfterLast(".")
-//        return when (fileExtension.lowercase(Locale.ROOT)) {
-//            "jpg", "jpeg", "png", "gif" -> FileType.image
-//            "mp4", "mkv", "avi" -> FileType.video
-//            "mp3", "wav", "ogg", "m4a" -> FileType.music
-//            else -> FileType.other
-//        }
-//    }
-//    fun getFileName(uri: Uri): String {
-//        val cursor = context.contentResolver.query(uri, null, null, null, null)
-//        cursor?.use {
-//            if (it.moveToFirst()) {
-//                val displayNameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-//                if (displayNameIndex != -1) {
-//                    val displayName = it.getString(displayNameIndex)
-//                    if (!displayName.isNullOrBlank()) {
-//                        return displayName
-//                    }
-//                }
-//            }
-//        }
-//        return "file"
-//    }
-//    fun isFileExistsInDirectory(fileName: String): Boolean {
-//        val filePath = File(appDir, fileName)
-//        return filePath.exists()
-//    }
 
     suspend fun getMessages(offset: Int, lazyListState: LazyListState, coroutineScope: CoroutineScope) {
         val jsonBody = JSONObject()
@@ -133,8 +116,8 @@ class MessagesViewModel(
                     val timeStamp = jsonObject.getString("time_stamp")
                     val hasViewed = jsonObject.getBoolean("is_readed")
                     val hasEdited = jsonObject.getBoolean("is_edited")
-//                    val fileName = jsonObject.getString("originalfile")
-//                    val file = jsonObject.getString("file_type")
+                    val fileName = jsonObject.getString("originalfile")
+                    val fileType = jsonObject.getString("file_type")
 
                     val message = Message(
                         messageId,
@@ -144,8 +127,8 @@ class MessagesViewModel(
                         senderId == sharedViewModel.userId,
                         hasViewed,
                         hasEdited,
-//                        fileName,
-//                        file
+                        fileName,
+                        fileType
                     )
                     newMessages.add(message)
                 }
@@ -175,7 +158,8 @@ class MessagesViewModel(
         val content = messageObject.getString("content")
         val hasViewed = messageObject.getBoolean("is_readed")
         val hasEdited = messageObject.getBoolean("is_edited")
-
+        val fileName = messageObject.getString("file_name")
+        val fileType = messageObject.getString("fileType")
 
         if (chatId != sharedViewModel.currentChatId) {
             return
@@ -188,8 +172,8 @@ class MessagesViewModel(
             sharedViewModel.userId == senderId,
             hasViewed,
             hasEdited,
-//            "null",
-//            "null"
+            fileName,
+            fileType
         )
 
         _messages.value = listOf(newMessage) + _messages.value
@@ -197,15 +181,6 @@ class MessagesViewModel(
             val lastIndex = _messages.value.size - 1
             lazyListState.scrollToItem(lastIndex)
         }
-
-//        if (selectedFiles.isNotEmpty()) {
-//            val jsonBase64 = JSONObject()
-//            jsonBase64.put("base64", uriToBase64(selectedFiles[0].first))
-//            jsonBase64.put("id", messageId)
-//            jsonBase64.put("type", "new_file_message")
-//            sharedViewModel.webSocket.send(jsonBase64.toString())
-//            selectedFiles.removeAt(0)
-//        }
     }
 
     fun updatedMessage(messageObject: JSONObject) {
@@ -215,27 +190,24 @@ class MessagesViewModel(
         val timeStamp = messageObject.getString("time_of_day")
         val newContent = messageObject.getString("new_content")
         val hasEdited = messageObject.getBoolean("is_edited")
-//        val fileName = messageObject.getString("file")
-//        val fileType = messageObject.getString("fyletype")
-
-//        Log.d("avopa", messageObject.toString())
-
         val updatedMessageIndex = _messages.value.indexOfFirst { it.id == messageId }
+        val fileName = messageObject.getString("file_name")
+        val fileType = messageObject.getString("fileType")
 
         if (chatId != sharedViewModel.currentChatId || updatedMessageIndex == -1) {
             return
         }
 
         val mess = Message(
-            id = messageId,
-            content = newContent,
-            owner = senderId,
-            timeStamp = parseCustomTime(timeStamp)!!,
-            hasYour = sharedViewModel.userId == senderId,
-            hasViewed = false,
-            hasEdited = hasEdited,
-//            fileName = if (selectedFiles.isNotEmpty()) fileName else "null",
-//            fileType = if (selectedFiles.isNotEmpty()) fileType else "null"
+            messageId,
+            newContent,
+            senderId,
+            parseCustomTime(timeStamp)!!,
+            sharedViewModel.userId == senderId,
+            false,
+            hasEdited,
+            fileName,
+            fileType
         )
 
         _messages.value = _messages.value.toMutableList().apply {
@@ -245,7 +217,6 @@ class MessagesViewModel(
             )
         }
 
-//        downloadFile(mess)
     }
 
     fun deleteMessage(messageObject: JSONObject) {
@@ -254,159 +225,32 @@ class MessagesViewModel(
         _messages.value = _messages.value.filterNot { it.id == messageId }
     }
 
-    fun sendMessage() {
-//        if (selectedFiles.isEmpty()) {
-            if (textState.value.isBlank()) return
-//        }
-
-        val jsonBody = JSONObject()
-        sharedViewModel.loadFromSharedPreferences()
-        jsonBody.put("chat_id", sharedViewModel.currentChatId)
-        jsonBody.put("sender_id", sharedViewModel.userId)
-        jsonBody.put("recipient_id", sharedViewModel.userId2)
-        jsonBody.put("content", textState.value)
-        textState.value = ""
-        jsonBody.put("time_of_day", getCurrentDateTimeInUTC())
-        jsonBody.put("type", "new_message")
-
-//        if (selectedFiles.isNotEmpty()) {
-//            jsonBody.put("originalfile", getFileName(selectedFiles[0].first))
-//            jsonBody.put("file_type", selectedFiles[0].second)
-//        }
-        sharedViewModel.webSocket.send(jsonBody.toString())
-    }
-
-//    private val lock = Object()
-//    suspend fun uriToImageBitmap(uri: Uri): ImageBitmap {
-//        return withContext(Dispatchers.IO) {
-//            synchronized(lock) {
-//                try {
-//                    Log.d("YourTag", "Start decoding image from URI: $uri")
-//
-//                    val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-//
-//                    if (inputStream == null) {
-//                        Log.e("YourTag", "InputStream is null")
-//                        throw IllegalArgumentException("Failed to open InputStream")
-//                    }
-//
-//                    Log.d("YourTag", "InputStream opened successfully")
-//
-//                    val bitmap = BitmapFactory.decodeStream(inputStream)
-//                    inputStream.close() // закрываем поток после использования
-//
-//                    Log.d("YourTag", "Image decoded successfully")
-//
-//                    if (bitmap == null) {
-//                        Log.e("YourTag", "Decoded bitmap is null")
-//                        throw IllegalArgumentException("Failed to decode bitmap")
-//                    }
-//
-//                    return@withContext bitmap.asImageBitmap()
-//                } catch (e: IOException) {
-//                    Log.e("YourTag", "Error opening InputStream", e)
-//                    throw IllegalArgumentException("Failed to open InputStream", e)
-//                } catch (e: OutOfMemoryError) {
-//                    Log.e("YourTag", "Out of memory", e)
-//                    throw IllegalArgumentException("Out of memory", e)
-//                }
-//            }
-//        }
-//    }
-//    fun uriToBase64(fileUri: Uri): String {
-//        val contentResolver: ContentResolver = context.contentResolver
-//        val inputStream: InputStream? = contentResolver.openInputStream(fileUri)
-//
-//        val outputStream = ByteArrayOutputStream()
-//
-//        inputStream?.use { input ->
-//            val buffer = ByteArray(4096)
-//            var bytesRead: Int
-//            while (input.read(buffer).also { bytesRead = it } != -1) {
-//                outputStream.write(buffer, 0, bytesRead)
-//            }
-//        }
-//
-//        val byteArray = outputStream.toByteArray()
-//        return Base64.encodeToString(byteArray, Base64.DEFAULT)
-//    }
-//
-//    fun downloadFile(mess: Message) {
-//        val jsonBody = JSONObject()
-//        jsonBody.put("message_id", mess.id)
-//        jsonBody.put("user_id", sharedViewModel.userId)
-//        jsonBody.put("login", sharedViewModel.login)
-//        jsonBody.put("password", sharedViewModel.password)
-//
-//        val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-//        val requestBody = jsonBody.toString().toRequestBody(mediaType)
-//
-//        val request = Request.Builder()
-//            .url("$mainUrl/file_download")
-//            .post(requestBody)
-//            .build()
-//
-//        viewModelScope.launch {
-//            withContext(Dispatchers.IO) {
-//                try {
-//                    val response = sharedViewModel.httpsClient.newCall(request).execute()
-//
-//                    if (response.isSuccessful) {
-//                        val inputStream: InputStream? = response.body?.byteStream()
-//                        createFileFromInputStream(inputStream, appDir, mess.fileName)
-//
-//
-//                    }
-//                } catch (e: IOException) {
-//                    e.printStackTrace()
-//                    // Обработка ошибок ввода/вывода
-//                }
-//            }
-//        }
-//    }
-//
-//    private fun createFileFromInputStream(inputStream: InputStream?, directory: File, fileName: String): File? {
-//        val file = File(directory, fileName)
-//
-//        if (file.exists()) {
-//            return null
-//        }
-//
-//        inputStream?.use { input ->
-//            FileOutputStream(file).use { output ->
-//                input.copyTo(output)
-//            }
-//        }
-//
-//        return file
-//    }
-
     fun updateMessage(mess: Message) {
         isEdit.value = true
-        editedTextState.value = mess.content
+        editedTextState = mess.content
         val jsonBody = JSONObject()
 
         viewModelScope.launch {
-            while (!editedFinished.value) {
+            while (!editedFinished) {
                 delay(100)
             }
 
 
-            if (editedTextState.value.isBlank()) {
-                editedFinished.value = false
+            if (editedTextState.isBlank()) {
+                editedFinished = false
                 isEdit.value = false
-                editedTextState.value = ""
+                editedTextState = ""
                 return@launch
             }
 
             jsonBody.put("message_id", mess.id)
-            jsonBody.put("new_content", editedTextState.value)
+            jsonBody.put("new_content", editedTextState)
             jsonBody.put("type", "update_message")
 
             sharedViewModel.webSocket.send(jsonBody.toString())
-            editedFinished.value = false
+            editedFinished = false
             isEdit.value = false
-            editedTextState.value = ""
+            editedTextState = ""
         }
     }
 
@@ -439,4 +283,123 @@ class MessagesViewModel(
 
         sharedViewModel.webSocket.send(jsonBody.toString())
     }
+
+    fun sendMessage() {
+        val jsonBody = JSONObject()
+
+        if (textState.isNotBlank() && selectedFiles.isEmpty())   {
+            jsonBody.put("file_name", "")
+            jsonBody.put("service_file", "")
+        }
+
+
+        if (selectedFiles.isNotEmpty()) {
+            val fileData = runBlocking { sendFile() }
+            Log.d("aboba", fileData.toString())
+            if (fileData.first != "" && fileData.second != "") {
+                jsonBody.put("file_name", fileData.first)
+                jsonBody.put("service_file", fileData.second)
+                selectedFiles.removeAt(0)
+            }
+        }
+
+        jsonBody.put("chat_id", sharedViewModel.currentChatId)
+        jsonBody.put("sender_id", sharedViewModel.userId)
+        jsonBody.put("recipient_id", sharedViewModel.userId2)
+        jsonBody.put("content", textState)
+        textState = ""
+        jsonBody.put("time_of_day", getCurrentDateTimeInUTC())
+        jsonBody.put("type", "new_message")
+
+
+        Log.d("aboba", jsonBody.toString())
+        sharedViewModel.webSocket.send(jsonBody.toString())
+    }
+
+    private suspend fun sendFile(): Pair<String, String> = withContext(Dispatchers.IO) {
+        var fileName = ""
+        var serviceFile = ""
+
+        if (selectedFiles.isNotEmpty()) {
+            Log.d("aboba", selectedFiles[0].first.path.toString())
+            val file = getFileFromUri(selectedFiles[0].first, context)
+
+            Log.d("aboba", file.toString())
+
+            if (file != null) {
+
+                val requestBody = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("user_id", sharedViewModel.userId.toString())
+                    .addFormDataPart("login", sharedViewModel.login)
+                    .addFormDataPart("password", sharedViewModel.password)
+                    .addFormDataPart(
+                        "file",
+                        file.name,
+                        file.asRequestBody("multipart/form-data".toMediaType())
+                    )
+                    .build()
+
+                val request = Request.Builder()
+                    .url("$mainUrl/file_upload")
+                    .post(requestBody)
+                    .build()
+
+                val response = sharedViewModel.httpsClient.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    copyFile(file, file)
+                    Log.d("test_file_upload", response.toString())
+                    val data = response.body?.string()
+                    val jsonArray = JSONObject(data!!)
+                    fileName = jsonArray.getString("file_name")
+                    serviceFile = jsonArray.getString("service_file")
+                }
+            } else {
+                Log.e("FileNotFound", "The selected file does not exist.")
+            }
+        } else {
+            Log.e("NoFileSelected", "No file selected.")
+        }
+
+        return@withContext Pair(fileName, serviceFile)
+    }
+
+    fun downloadFileAsync(mess: Message, saveInDownload: Boolean = false): Deferred<File?> =
+        viewModelScope.async(Dispatchers.IO) {
+            val jsonBody = JSONObject()
+            jsonBody.put("message_id", mess.id)
+            jsonBody.put("user_id", sharedViewModel.userId)
+            jsonBody.put("login", sharedViewModel.login)
+            jsonBody.put("password", sharedViewModel.password)
+
+            val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+            val requestBody = jsonBody.toString().toRequestBody(mediaType)
+
+            val request = Request.Builder()
+                .url("$mainUrl/file_download")
+                .post(requestBody)
+                .build()
+
+
+            var file: File? = null
+
+            try {
+                val response = sharedViewModel.httpsClient.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val inputStream: InputStream? = response.body?.byteStream()
+                    val targetDirectory =
+                        if (saveInDownload)
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                        else
+                            appDir
+                    file = createFileFromInputStream(inputStream, targetDirectory, mess.fileName)
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+
+            file
+        }
 }

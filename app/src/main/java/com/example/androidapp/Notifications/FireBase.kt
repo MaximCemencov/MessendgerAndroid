@@ -18,7 +18,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         if (!sharedPreferencesManager.getBoolean("isInApp", true)) {
             val messageData = remoteMessage.data
-            val messageContent = messageData["content"]
+            var messageContent = messageData["content"]
+            val fileName = messageData["file"]
+            if (fileName != "null") {
+                messageContent = fileName
+            }
             val senderName = messageData["user_name"]
 
             // Создаем уведомление

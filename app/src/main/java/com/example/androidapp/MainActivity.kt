@@ -24,9 +24,10 @@ import com.example.androidapp.features.SharedPreferencesManager
 import com.example.androidapp.screens.ChatsScreens.CreateChat
 import com.example.androidapp.screens.ChatsScreens.MainScreen
 import com.example.androidapp.screens.Drawer.Profile
-import com.example.androidapp.screens.MessagesScreen.MessagesScreen
 import com.example.androidapp.screens.Regisctation.MainRegistrationScreen
 import com.example.androidapp.screens.Settings.SettingsScreen
+import com.example.androidapp.screens.MessagesScreen.MessagesScreen
+import com.example.androidapp.screens.Viewer.ImageViewer
 import com.example.androidapp.viewModels.MessagesViewModel.MessagesViewModel
 import com.example.androidapp.viewModels.Profile.ProfileViewModel
 import com.example.androidapp.viewModels.RegistrationViewModel.LoginViewModel
@@ -40,6 +41,7 @@ import com.google.firebase.FirebaseApp
 import createRequest
 import kotlinx.coroutines.delay
 import org.json.JSONObject
+import java.io.File
 
 
 class MainActivity : ComponentActivity() {
@@ -49,10 +51,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
 
-//        val appDir = File(filesDir, "messenger_folder")
-//        if (!appDir.exists()) {
-//            appDir.mkdir()
-//        }
+        val appDir = File(filesDir, "messenger_folder")
+        if (!appDir.exists()) {
+            appDir.mkdir()
+        }
 
         val sharedPreferencesManager = SharedPreferencesManager(this)
         sharedPreferencesManager.saveBoolean("isInApp", true)
@@ -88,7 +90,7 @@ class MainActivity : ComponentActivity() {
             val registrationViewModel = RegistrationViewModel(sharedViewModel)
             val createChatViewModel = CreateChatViewModel(sharedViewModel)
             val messagesViewModel =
-                MessagesViewModel(sharedViewModel, lazyListState, coroutineScope)
+                MessagesViewModel(sharedViewModel, lazyListState, coroutineScope, this)
             val mainChatScreenViewModel = MainChatScreenViewModel(sharedViewModel)
             val profileViewModel = ProfileViewModel(this, sharedViewModel)
 
@@ -166,6 +168,9 @@ class MainActivity : ComponentActivity() {
                             navController,
                             profileViewModel
                         )
+                    }
+                    composable("ImageViewed") {
+                        ImageViewer(sharedViewModel, navController)
                     }
                 }
             }

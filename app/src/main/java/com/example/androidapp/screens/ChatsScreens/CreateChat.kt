@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.androidapp.features.MyColors
 import com.example.androidapp.features.generateRandomColor
-import com.example.androidapp.features.mainUrl
 import com.example.androidapp.viewModels.Profile.ProfileViewModel
 import com.example.androidapp.viewModels.createChat.CreateChatViewModel
 import kotlinx.coroutines.launch
