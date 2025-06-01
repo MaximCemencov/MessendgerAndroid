@@ -2,7 +2,7 @@ package com.example.androidapp.websocket
 
 import android.util.Log
 import com.example.androidapp.viewModels.SharedViewModel
-import createRequest
+import com.example.androidapp.features.createRequest
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener

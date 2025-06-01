@@ -15,8 +15,11 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.WebSocket
 import java.util.concurrent.TimeUnit
+import androidx.core.content.edit
 
-class SharedViewModel(private val context: Context) : ViewModel() {
+class SharedViewModel(
+    private val context: Context
+) : ViewModel() {
     val client: OkHttpClient = OkHttpClient.Builder()
         .retryOnConnectionFailure(true)
         .pingInterval(5, TimeUnit.SECONDS)
@@ -49,19 +52,19 @@ class SharedViewModel(private val context: Context) : ViewModel() {
 
     fun saveToSharedPreferences() {
         val sharedPreferences = appContext.getSharedPreferences("my_shared_preferences", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        editor.putInt("theme", theme)
-        editor.putString("password", password)
-        editor.putBoolean("hasLogIn", hasLogIn)
-        editor.putString("login", login)
-        editor.putString("userName", userName)
-        editor.putInt("userId", userId)
-        editor.putInt("user_id2", userId2)
-        editor.putString("user_name2", userName2)
-        editor.putInt("current_chat_id", currentChatId)
-        editor.putString("avatarUri", avatarBase64)
+        sharedPreferences.edit {
+            putInt("theme", theme)
+            putString("password", password)
+            putBoolean("hasLogIn", hasLogIn)
+            putString("login", login)
+            putString("userName", userName)
+            putInt("userId", userId)
+            putInt("user_id2", userId2)
+            putString("user_name2", userName2)
+            putInt("current_chat_id", currentChatId)
+            putString("avatarUri", avatarBase64)
 
-        editor.apply()
+        }
     }
 
     private fun loadFromSharedPreferences() {

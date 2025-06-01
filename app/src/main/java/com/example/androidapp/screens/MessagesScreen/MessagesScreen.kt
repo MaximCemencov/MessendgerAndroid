@@ -1,28 +1,18 @@
 package com.example.androidapp.screens.MessagesScreen
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +21,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,17 +39,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.androidapp.R
 import com.example.androidapp.features.MyColors
 import com.example.androidapp.features.limit
 import com.example.androidapp.screens.Items.MessageItem.MessageItem
 import com.example.androidapp.viewModels.MessagesViewModel.MessagesViewModel
-import com.example.androidapp.viewModels.MessagesViewModel.functions.getFileName
-import com.example.androidapp.viewModels.MessagesViewModel.functions.getFileType
 import com.example.androidapp.viewModels.SharedViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
@@ -76,16 +61,16 @@ fun MessagesScreen(
     coroutineScope: CoroutineScope,
     lazyListState: LazyListState
 ) {
-    val getContent = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            if (uri != null) {
-                val fileType = getFileType(uri.toString())
-
-                if (viewModel.selectedFiles.isNotEmpty())
-                    viewModel.selectedFiles[0] = Pair(uri, fileType)
-                else
-                    viewModel.selectedFiles.add(0, Pair(uri, fileType))
-            }
-        }
+//    val getContent = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+//            if (uri != null) {
+//                val fileType = getFileType(uri.toString())
+//
+//                if (viewModel.selectedFiles.isNotEmpty())
+//                    viewModel.selectedFiles[0] = Pair(uri, fileType)
+//                else
+//                    viewModel.selectedFiles.add(0, Pair(uri, fileType))
+//            }
+//        }
 
 
     val messages by viewModel.messages.collectAsState()
@@ -234,15 +219,15 @@ fun MessagesScreen(
                     }
                 } else {
                     Row {
-                        IconButton(onClick = {
-                            expanded = !expanded
-                        }) {
-                            Icon(
-                                painter = painterResource(R.drawable.add_file),
-                                contentDescription = null,
-                                tint = textColor
-                            )
-                        }
+//                        IconButton(onClick = {
+//                            expanded = !expanded
+//                        }) {
+//                            Icon(
+//                                painter = painterResource(R.drawable.add_file),
+//                                contentDescription = null,
+//                                tint = textColor
+//                            )
+//                        }
 
                         IconButton(onClick = {
                             viewModel.sendMessage()
@@ -264,81 +249,81 @@ fun MessagesScreen(
             maxLines = 3
         )
 
-        Row (
-            Modifier
-                .height(animatedHeight)
-                .background(buttonColor),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .size(animatedHeight)
-                    .clickable {
-                        getContent.launch("*/*")
-                    }
-                    .padding(5.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.icon_file),
-                    contentDescription = null,
-                    tint = textColor
-                )
-                Text(
-                    "pick file",
-                    color = textColor
-                )
-            }
-            Divider(
-                Modifier
-                    .fillMaxHeight()
-                    .padding(vertical = 10.dp)
-                    .width(2.dp), // Ширина разделителя
-                color = buttonTextColor // Цвет разделителя
-            )
-
-            LazyRow(
-                Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(viewModel.selectedFiles) { uri ->
-                    val icon = when (uri.second.name) {
-                        "IMAGE" -> painterResource(id = R.drawable.icon_image)
-                        "VIDEO" -> painterResource(id = R.drawable.icon_video)
-                        "AUDIO" -> painterResource(id = R.drawable.icon_music)
-                        else -> painterResource(id = R.drawable.icon_file)
-                    }
-
-                    val fileName = getFileName(uri.first, viewModel.messagesViewModelContext)
-
-                    Column(
-                        modifier = Modifier
-                            .height(80.dp)
-                            .padding(6.dp)
-                            .clickable {}
-                            .border(
-                                BorderStroke(1.dp, textColor),
-                                RoundedCornerShape(10)),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            painter = icon,
-                            contentDescription = null,
-                            tint = textColor,
-                            modifier = Modifier.size(45.dp)
-                        )
-                        Text(
-                            text = fileName,
-                            color = textColor,
-                            maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 5.dp)
-                        )
-
-                    }
-                }
-            }
-        }
+//        Row (
+//            Modifier
+//                .height(animatedHeight)
+//                .background(buttonColor),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Column(
+//                horizontalAlignment = Alignment.CenterHorizontally,
+//                verticalArrangement = Arrangement.Center,
+//                modifier = Modifier
+//                    .size(animatedHeight)
+//                    .clickable {
+//                        getContent.launch("*/*")
+//                    }
+//                    .padding(5.dp),
+//            ) {
+//                Icon(
+//                    painter = painterResource(R.drawable.icon_file),
+//                    contentDescription = null,
+//                    tint = textColor
+//                )
+//                Text(
+//                    "pick file",
+//                    color = textColor
+//                )
+//            }
+//            Divider(
+//                Modifier
+//                    .fillMaxHeight()
+//                    .padding(vertical = 10.dp)
+//                    .width(2.dp), // Ширина разделителя
+//                color = buttonTextColor // Цвет разделителя
+//            )
+//
+//            LazyRow(
+//                Modifier.fillMaxSize(),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                items(viewModel.selectedFiles) { uri ->
+//                    val icon = when (uri.second.name) {
+//                        "IMAGE" -> painterResource(id = R.drawable.icon_image)
+//                        "VIDEO" -> painterResource(id = R.drawable.icon_video)
+//                        "AUDIO" -> painterResource(id = R.drawable.icon_music)
+//                        else -> painterResource(id = R.drawable.icon_file)
+//                    }
+//
+//                    val fileName = getFileName(uri.first, viewModel.messagesViewModelContext)
+//
+//                    Column(
+//                        modifier = Modifier
+//                            .height(80.dp)
+//                            .padding(6.dp)
+//                            .clickable {}
+//                            .border(
+//                                BorderStroke(1.dp, textColor),
+//                                RoundedCornerShape(10)),
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                        verticalArrangement = Arrangement.Center
+//                    ) {
+//                        Icon(
+//                            painter = icon,
+//                            contentDescription = null,
+//                            tint = textColor,
+//                            modifier = Modifier.size(45.dp)
+//                        )
+//                        Text(
+//                            text = fileName,
+//                            color = textColor,
+//                            maxLines = 1,
+//                            modifier = Modifier.padding(horizontal = 5.dp)
+//                        )
+//
+//                    }
+//                }
+//            }
+//        }
     }
 }

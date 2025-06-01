@@ -20,7 +20,6 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.androidapp.features.SharedPreferencesManager
 import com.example.androidapp.screens.ChatsScreens.CreateChat
 import com.example.androidapp.screens.ChatsScreens.MainScreen
 import com.example.androidapp.screens.Drawer.Profile
@@ -38,15 +37,13 @@ import com.example.androidapp.viewModels.createChat.MainChatScreenViewModel
 import com.example.androidapp.websocket.MyWebSocketListener
 import com.example.androidapp.websocket.WorkWithWebsocket
 import com.google.firebase.FirebaseApp
-import createRequest
+import com.example.androidapp.features.createRequest
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import java.io.File
 
 
 class MainActivity : ComponentActivity() {
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
@@ -55,9 +52,6 @@ class MainActivity : ComponentActivity() {
         if (!appDir.exists()) {
             appDir.mkdir()
         }
-
-        val sharedPreferencesManager = SharedPreferencesManager(this)
-        sharedPreferencesManager.saveBoolean("isInApp", true)
 
         if (Build.VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
@@ -179,8 +173,8 @@ class MainActivity : ComponentActivity() {
 
 
     override fun onStop() {
-        val sharedPreferencesManager = SharedPreferencesManager(this)
-        sharedPreferencesManager.saveBoolean("isInApp", false)
+//        val sharedPreferencesManager = SharedPreferencesManager(this)
+//        sharedPreferencesManager.saveBoolean("isInApp", false)
         super.onStop()
     }
 }
